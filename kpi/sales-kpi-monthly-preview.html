@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>销售员工 KPI 月度结果预览</title>
+  <style>
+    :root {
+      --bg: #eef3f7;
+      --card: rgba(255, 255, 255, 0.9);
+      --line: #d8e2ea;
+      --text: #102230;
+      --sub: #587080;
+      --accent: #0f766e;
+      --accent-deep: #155e75;
+      --soft: #dff4ef;
+      --warn: #b45309;
+      --warn-bg: #fff4e6;
+      --ok: #166534;
+      --ok-bg: #ecfdf3;
+      --muted-bg: #f5f8fb;
+      --fail: #b91c1c;
+      --fail-bg: #fef2f2;
+      --shadow: 0 16px 36px rgba(16, 34, 48, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 34%),
+        radial-gradient(circle at right 15%, rgba(21, 94, 117, 0.15), transparent 30%),
+        linear-gradient(180deg, #f8fbfc 0%, var(--bg) 100%);
+    }
+
+    .wrap {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 24px 18px 36px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 22px;
+      background:
+        linear-gradient(135deg, rgba(15, 118, 110, 0.94), rgba(21, 94, 117, 0.94)),
+        linear-gradient(120deg, #0f766e, #155e75);
+      color: #fff;
+      box-shadow: 0 18px 46px rgba(15, 118, 110, 0.22);
+      padding: 26px 28px 24px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -60px;
+      top: -50px;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero p {
+      margin: 10px 0 0;
+      max-width: 780px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .hero-toolbar {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .hero-toolbar label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .hero-toolbar select,
+    .hero-toolbar button {
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 12px;
+      outline: none;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-toolbar button {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .card {
+      border: 1px solid rgba(216, 226, 234, 0.95);
+      border-radius: 18px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .card-hd {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--sub);
+      letter-spacing: 0.2px;
+    }
+
+    .card-bd {
+      padding: 16px;
+    }
+
+    .summary-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .summary-item {
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #fcfeff 0%, #f7fafc 100%);
+    }
+
+    .summary-item .label {
+      font-size: 11px;
+      color: var(--sub);
+    }
+
+    .summary-item .value {
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .summary-item .desc {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #708695;
+      line-height: 1.6;
+    }
+
+    .status-row {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .ok {
+      color: var(--ok);
+      background: var(--ok-bg);
+      border-color: #bbf7d0;
+    }
+
+    .warn {
+      color: var(--warn);
+      background: var(--warn-bg);
+      border-color: #fed7aa;
+    }
+
+    .fail {
+      color: var(--fail);
+      background: var(--fail-bg);
+      border-color: #fecaca;
+    }
+
+    .neutral {
+      color: #355268;
+      background: #eff5f9;
+      border-color: #c8d7e2;
+    }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 0.9fr;
+      gap: 16px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 120px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(246,250,252,0.96) 100%);
+      padding: 14px 14px 12px;
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      right: -26px;
+      top: -26px;
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      background: rgba(15, 118, 110, 0.06);
+    }
+
+    .metric-name {
+      position: relative;
+      z-index: 1;
+      font-size: 12px;
+      color: var(--sub);
+      line-height: 1.5;
+      min-height: 34px;
+    }
+
+    .metric-value {
+      position: relative;
+      z-index: 1;
+      margin-top: 12px;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    .metric-note {
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #728898;
+      line-height: 1.6;
+    }
+
+    .soft-box {
+      border: 1px dashed #9bcfc6;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #f0fbf8 0%, #e5f7f2 100%);
+      padding: 14px;
+    }
+
+    .soft-box h3 {
+      margin: 0;
+      font-size: 14px;
+      color: #0f5b54;
+    }
+
+    .soft-box ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      font-size: 12px;
+      line-height: 1.8;
+      color: #315c62;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      background: #fff;
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f7fbfd;
+      color: #436173;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .muted {
+      color: #6d8392;
+    }
+
+    .footnote {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--muted-bg);
+      border: 1px solid #d6e1e9;
+      font-size: 12px;
+      color: #5b7383;
+      line-height: 1.8;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .step-no {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f766e, #155e75);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .step-body {
+      padding-top: 4px;
+      font-size: 12px;
+      color: #4f6778;
+      line-height: 1.7;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+
+    @media (max-width: 1200px) {
+      .metric-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 980px) {
+      .main-grid,
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .wrap {
+        padding: 16px 12px 28px;
+      }
+
+      .hero {
+        padding: 20px 18px;
+      }
+
+      .hero h1 {
+        font-size: 22px;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>销售员工 KPI 第一阶段试运行预览</h1>
+      <p>这个页面是本地预览模板，用来先看“月度 KPI 结果表”的展示方式是否符合你的预期。重点展示了 12 个 KPI 指标、执行状态、第一阶段近似口径说明，以及脚本执行后的结果表示例。</p>
+      <div class="hero-toolbar">
+        <label for="scene">预览场景</label>
+        <select id="scene">
+          <option value="steady">稳态样例</option>
+          <option value="risk">风险样例</option>
+          <option value="empty">低业务量样例</option>
+        </select>
+        <button type="button" id="focusMetrics">只看 KPI 卡片</button>
+      </div>
+    </section>
+
+    <section class="main-grid">
+      <aside class="card">
+        <div class="card-hd">执行面板示意</div>
+        <div class="card-bd">
+          <div class="summary-list">
+            <div class="summary-item">
+              <div class="label">脚本名称</div>
+              <div class="value">Sales KPI Monthly Calc SS</div>
+              <div class="desc">按月统计销售人员 KPI，已按“销售人员 + 月份”做幂等更新。</div>
+            </div>
+            <div class="summary-item">
+              <div class="label">统计月份</div>
+              <div class="value" id="summaryMonth">2026-03</div>
+              <div class="desc">未传参数时默认统计上个月。</div>
+            </div>
+            <div class="summary-item">
+              <div class="label">销售人员</div>
+              <div class="value" id="summaryRep">张伟</div>
+              <div class="desc">结果表一条记录只对应一个销售人员和一个月份。</div>
+            </div>
+            <div class="summary-item">
+              <div class="label">脚本状态</div>
+              <div class="value" id="summaryStatus">已计算（含近似口径）</div>
+              <div class="desc">重复执行会更新原记录，不会重复创建。</div>
+            </div>
+          </div>
+
+          <div class="status-row">
+            <span class="chip ok" id="tagCore">自动更新</span>
+            <span class="chip warn" id="tagApprox">含近似口径</span>
+            <span class="chip neutral">第一阶段试运行</span>
+          </div>
+
+          <div class="footnote" id="memoBox">
+            毛利额当前优先读取 grossprofit；回款达成率按客户当前销售负责人近似归属；商机跟进及时率与合同执行进度跟进及时率暂为预留口径。
+          </div>
+        </div>
+      </aside>
+
+      <div class="panel-grid">
+        <section class="card">
+          <div class="card-hd">12 个 KPI 指标看板</div>
+          <div class="card-bd">
+            <div class="metric-grid" id="metricGrid"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-hd">第一阶段口径提醒</div>
+          <div class="card-bd">
+            <div class="soft-box">
+              <h3>当前最需要确认的 4 项</h3>
+              <ul id="rulesList"></ul>
+            </div>
+            <div class="footnote" style="margin-top:12px;">
+              建议先让业务看这个页面确认两件事：一是字段名称和顺序是否顺手，二是哪些指标可以接受第一阶段近似口径，哪些必须改成精确口径。
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top: 16px;">
+      <div class="card-hd">销售员工 KPI 月度结果表示例</div>
+      <div class="card-bd">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>销售人员</th>
+                <th>统计月份</th>
+                <th>销售订单金额</th>
+                <th>开票金额</th>
+                <th>毛利额</th>
+                <th>毛利率</th>
+                <th>回款达成率</th>
+                <th>应收逾期金额</th>
+                <th>新增有效商机数</th>
+                <th>报价转订单率</th>
+                <th>老客户复购率</th>
+                <th>单据填写完整率</th>
+                <th>考核状态</th>
+              </tr>
+            </thead>
+            <tbody id="resultRows"></tbody>
+          </table>
+        </div>
+        <div class="footnote">
+          这里模拟的是 NetSuite 中 `customrecord_sales_kpi_monthly` 的结果视图，不是最终系统原生页面截图。真实上线后如果你需要，我下一步可以继续帮你做成 Suitelet 看板，或者把这套展示拆成 NetSuite 页面字段布局建议。
+        </div>
+      </div>
+    </section>
+
+    <section class="main-grid" style="margin-top: 16px;">
+      <section class="card">
+        <div class="card-hd">我建议你重点确认的页面点位</div>
+        <div class="card-bd">
+          <h2 class="section-title">页面检查清单</h2>
+          <div class="steps">
+            <div class="step">
+              <div class="step-no">1</div>
+              <div class="step-body">12 个 KPI 的中文名称是否就是你希望业务看到的最终名称。</div>
+            </div>
+            <div class="step">
+              <div class="step-no">2</div>
+              <div class="step-body">哪些指标要直接显示百分比，哪些要同时显示备注说明，避免业务误解第一阶段是“精确值”。</div>
+            </div>
+            <div class="step">
+              <div class="step-no">3</div>
+              <div class="step-body">结果表是否需要把“备注”长期展示在列表里，还是只在打开明细记录时查看。</div>
+            </div>
+            <div class="step">
+              <div class="step-no">4</div>
+              <div class="step-body">是否还要额外展示“统计开始日期、统计结束日期、计算时间、最后更新人”等审计字段。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-hd">下一步可继续做</div>
+        <div class="card-bd">
+          <h2 class="section-title">可继续延伸</h2>
+          <div class="steps">
+            <div class="step">
+              <div class="step-no">A</div>
+              <div class="step-body">把这个预览页改成一个真实 Suitelet，直接在 NetSuite 里看 KPI 看板。</div>
+            </div>
+            <div class="step">
+              <div class="step-no">B</div>
+              <div class="step-body">把第 11 个“合同执行进度跟进及时率”接入你现有 `doc_schedule` 的真实字段。</div>
+            </div>
+            <div class="step">
+              <div class="step-no">C</div>
+              <div class="step-body">给结果表加总分公式和颜色规则，让业务一眼看出高风险销售人员。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script>
+    var scenarios = {
+      steady: {
+        month: '2026-03',
+        rep: '张伟',
+        status: '已计算（含近似口径）',
+        memo: '毛利额当前优先读取 grossprofit；回款达成率按客户当前销售负责人近似归属；商机跟进及时率与合同执行进度跟进及时率暂为预留口径。',
+        rules: [
+          '毛利额字段是否直接使用 grossprofit。',
+          '回款是否接受按客户当前销售负责人归属。',
+          '合同进度表销售负责人字段和更新时间字段是否已存在。',
+          'KPI 总分是否需要本阶段就启用。'
+        ],
+        tags: {
+          core: '自动更新',
+          approx: '含近似口径'
+        },
+        metrics: [
+          ['销售订单金额', '1,286,500', '本月销售订单主行汇总'],
+          ['开票金额', '1,042,800', '本月发票主行汇总'],
+          ['毛利额', '218,600', '当前优先读取 grossprofit'],
+          ['毛利率', '20.96%', '毛利额 / 开票金额'],
+          ['回款达成率', '82.40%', '本月付款 / 本月开票'],
+          ['应收逾期金额', '165,300', '到统计结束日仍未收清'],
+          ['新增有效商机数', '9', '排除无效/关闭丢失'],
+          ['商机跟进及时率', '0%', '第一阶段预留'],
+          ['报价转订单率', '61.54%', 'Estimate 转 SO 近似口径'],
+          ['老客户复购率', '47.62%', '历史老客户当月复购'],
+          ['合同执行进度跟进及时率', '0%', '待接真实字段'],
+          ['单据填写完整率', '94.44%', '按 SO 关键字段完整度']
+        ],
+        rows: [
+          ['张伟', '2026-03', '1,286,500', '1,042,800', '218,600', '20.96%', '82.40%', '165,300', '9', '61.54%', '47.62%', '94.44%', '已计算（含近似口径）'],
+          ['李娜', '2026-03', '986,300', '812,400', '173,500', '21.36%', '75.20%', '201,800', '7', '58.33%', '42.11%', '91.67%', '已更新（含近似口径）'],
+          ['王磊', '2026-03', '1,503,900', '1,166,000', '251,700', '21.59%', '89.30%', '96,500', '11', '63.64%', '53.85%', '97.22%', '已计算（含近似口径）']
+        ]
+      },
+      risk: {
+        month: '2026-03',
+        rep: '李娜',
+        status: '已计算（需复核）',
+        memo: '本月存在逾期应收偏高、回款达成率偏低的情况；商机跟进及时率与合同执行进度跟进及时率仍为预留口径。',
+        rules: [
+          '回款归属口径若改成核销发票，结果可能会变化。',
+          '应收逾期金额较高时是否需要增加红色预警。',
+          '报价转订单率是否要拆分新客户和老客户口径。',
+          '结果表是否需要增加“风险等级”字段。'
+        ],
+        tags: {
+          core: '需业务复核',
+          approx: '风险偏高'
+        },
+        metrics: [
+          ['销售订单金额', '742,900', '订单规模下降'],
+          ['开票金额', '680,400', '低于上月'],
+          ['毛利额', '102,300', '当前优先读取 grossprofit'],
+          ['毛利率', '15.03%', '毛利偏低，建议复核'],
+          ['回款达成率', '41.20%', '回款偏低'],
+          ['应收逾期金额', '428,600', '逾期偏高'],
+          ['新增有效商机数', '4', '商机储备偏少'],
+          ['商机跟进及时率', '0%', '第一阶段预留'],
+          ['报价转订单率', '33.33%', '报价转单偏弱'],
+          ['老客户复购率', '28.57%', '老客户复购偏低'],
+          ['合同执行进度跟进及时率', '0%', '待接真实字段'],
+          ['单据填写完整率', '81.82%', '单据完整性需提升']
+        ],
+        rows: [
+          ['李娜', '2026-03', '742,900', '680,400', '102,300', '15.03%', '41.20%', '428,600', '4', '33.33%', '28.57%', '81.82%', '已计算（需复核）'],
+          ['张伟', '2026-03', '1,286,500', '1,042,800', '218,600', '20.96%', '82.40%', '165,300', '9', '61.54%', '47.62%', '94.44%', '已计算（含近似口径）'],
+          ['王磊', '2026-03', '1,503,900', '1,166,000', '251,700', '21.59%', '89.30%', '96,500', '11', '63.64%', '53.85%', '97.22%', '已计算（含近似口径）']
+        ]
+      },
+      empty: {
+        month: '2026-02',
+        rep: '王敏',
+        status: '已计算',
+        memo: '该销售人员本月销售订单较少，脚本仍可正常生成记录。无销售订单时相关 KPI 将回写 0。',
+        rules: [
+          '无订单月份是否也保留 KPI 记录。',
+          '是否需要在状态字段中标记“低业务量月份”。',
+          '回款达成率分母为 0 时当前返回 0。',
+          '商机和合同跟进指标待后续正式接入。'
+        ],
+        tags: {
+          core: '低业务量',
+          approx: '可正常出数'
+        },
+        metrics: [
+          ['销售订单金额', '56,000', '业务量较低'],
+          ['开票金额', '0', '本月未开票'],
+          ['毛利额', '0', '无开票则无毛利'],
+          ['毛利率', '0%', '分母为 0 时返回 0'],
+          ['回款达成率', '0%', '无开票则返回 0'],
+          ['应收逾期金额', '0', '本月无逾期'],
+          ['新增有效商机数', '2', '仍有商机新增'],
+          ['商机跟进及时率', '0%', '第一阶段预留'],
+          ['报价转订单率', '50.00%', '两张报价转成一张订单'],
+          ['老客户复购率', '16.67%', '复购较少'],
+          ['合同执行进度跟进及时率', '0%', '待接真实字段'],
+          ['单据填写完整率', '100.00%', '少量订单但完整']
+        ],
+        rows: [
+          ['王敏', '2026-02', '56,000', '0', '0', '0%', '0%', '0', '2', '50.00%', '16.67%', '100.00%', '已计算'],
+          ['赵强', '2026-02', '0', '0', '0', '0%', '0%', '0', '1', '0%', '0%', '0%', '已计算'],
+          ['陈晨', '2026-02', '89,500', '42,000', '6,500', '15.48%', '52.38%', '0', '3', '66.67%', '25.00%', '88.89%', '已更新（含近似口径）']
+        ]
+      }
+    };
+
+    function renderScenario(key) {
+      var data = scenarios[key];
+      var metricGrid = document.getElementById('metricGrid');
+      var rulesList = document.getElementById('rulesList');
+      var resultRows = document.getElementById('resultRows');
+      var html = '';
+      var i = 0;
+
+      document.getElementById('summaryMonth').textContent = data.month;
+      document.getElementById('summaryRep').textContent = data.rep;
+      document.getElementById('summaryStatus').textContent = data.status;
+      document.getElementById('memoBox').textContent = data.memo;
+      document.getElementById('tagCore').textContent = data.tags.core;
+      document.getElementById('tagApprox').textContent = data.tags.approx;
+
+      metricGrid.innerHTML = '';
+      for (i = 0; i < data.metrics.length; i += 1) {
+        html += ''
+          + '<div class="metric-card">'
+          + '  <div class="metric-name">' + data.metrics[i][0] + '</div>'
+          + '  <div class="metric-value">' + data.metrics[i][1] + '</div>'
+          + '  <div class="metric-note">' + data.metrics[i][2] + '</div>'
+          + '</div>';
+      }
+      metricGrid.innerHTML = html;
+
+      rulesList.innerHTML = '';
+      html = '';
+      for (i = 0; i < data.rules.length; i += 1) {
+        html += '<li>' + data.rules[i] + '</li>';
+      }
+      rulesList.innerHTML = html;
+
+      resultRows.innerHTML = '';
+      html = '';
+      for (i = 0; i < data.rows.length; i += 1) {
+        html += '<tr>';
+        html += '<td>' + data.rows[i][0] + '</td>';
+        html += '<td>' + data.rows[i][1] + '</td>';
+        html += '<td>' + data.rows[i][2] + '</td>';
+        html += '<td>' + data.rows[i][3] + '</td>';
+        html += '<td>' + data.rows[i][4] + '</td>';
+        html += '<td>' + data.rows[i][5] + '</td>';
+        html += '<td>' + data.rows[i][6] + '</td>';
+        html += '<td>' + data.rows[i][7] + '</td>';
+        html += '<td>' + data.rows[i][8] + '</td>';
+        html += '<td>' + data.rows[i][9] + '</td>';
+        html += '<td>' + data.rows[i][10] + '</td>';
+        html += '<td>' + data.rows[i][11] + '</td>';
+        html += '<td>' + data.rows[i][12] + '</td>';
+        html += '</tr>';
+      }
+      resultRows.innerHTML = html;
+    }
+
+    document.getElementById('scene').addEventListener('change', function (event) {
+      renderScenario(event.target.value);
+    });
+
+    document.getElementById('focusMetrics').addEventListener('click', function () {
+      document.getElementById('metricGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    renderScenario('steady');
+  </script>
+</body>
+</html>
