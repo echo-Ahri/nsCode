@@ -1091,7 +1091,7 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                     // var zxq = return_info.custpage_xqc_yxxq;// + return_info.custpage_xqc_ddxq(已在商机包含);// + return_info.custpage_xqc_bjxq(不同状态的商机) 
                     return_info.custpage_xqc_zxq = return_info.custpage_xqc_ddxq + return_info.custpage_xqc_new_ddxq;//已经有的商机转换的估价单 加上 直接新建的估价单需求
 
-                    return_info.custpage_zqk = zxq + return_info.custpage_cp_sl - zgy - return_info.custpage_kcc_kyl;//总需求 - 总供应 - 可用量 + 当前自己 排除 的 数量
+                    return_info.custpage_zqk = return_info.custpage_xqc_zxq + return_info.custpage_cp_sl - zgy - return_info.custpage_kcc_kyl;//总需求 - 总供应 - 可用量 + 当前自己 排除 的 数量
 
                     if (return_info.custpage_zqk > 0) { //说明有缺口
                         return_str += '货品[' + return_info.custpage_cp_mc + '] 缺口数量:' + return_info.custpage_zqk + '   ';
