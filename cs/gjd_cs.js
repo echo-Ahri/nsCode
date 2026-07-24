@@ -567,7 +567,7 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                             }
 
                             // break; //终止循环 不用往后找了
-                        }else{
+                        } else {
                             var xjd_status_str = '已更新回写';
                             if (xjd_type[i] == 'custbody_create_xjd_id') {
                                 this_record.setValue({ fieldId: 'custbody_mul_xjd_hp_status', value: '询价单' + xjd_status_str, ignoreFieldChange: true }); //记录货品询价单状态
@@ -989,15 +989,29 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                     , 'AND', ['type', 'ANYOF', 'Estimate'] //首字母大写
                     , 'AND', ['mainline', 'IS', 'F']
                 ];
-                var gjd_search = search.create({ type: 'transaction', filters: filters, columns: ['internalid', 'item', 'quantity'] });
+                var gjd_search = search.create({ type: 'transaction', filters: filters, columns: ['internalid', 'item', 'quantity', 'opportunity'] });
                 var gjd_arr = [];
                 gjd_search.run().each(function (res) { //查出所有是库存货品的货品
                     // log.debug('gjd_arr', res);
                     if (res.getValue('internalid') != this_gjd_id) { //排除 可能查到 自己编辑的这张估价单单据
-                        gjd_arr.push({
-                            hp_id: res.getValue('item'), //货品id
-                            hp_sl: res.getValue('quantity'), //数量
-                        });
+                        // gjd_arr.push({
+                        //     hp_id: res.getValue('item'), //货品id
+                        //     hp_sl: res.getValue('quantity'), //数量
+                        // });
+                        var sj_id = res.getValue('opportunity'); //商机id
+                        if (!isEmpty(sj_id)) { //存在商机id 代表是商机创建的估价单
+                            gjd_arr.push({
+                                hp_id: res.getValue('item'), //货品id
+                                hp_sl: res.getValue('quantity'), //数量
+                                hp_new_sl: 0,
+                            });
+                        } else { //没有商机id 代表是直接新建的估价单
+                            gjd_arr.push({
+                                hp_id: res.getValue('item'), //货品id
+                                hp_sl: 0,
+                                hp_new_sl: res.getValue('quantity'), //数量
+                            });
+                        }
                     }
 
                     return true; //必须有返回值, 不然只有第一条
@@ -1023,6 +1037,7 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                         custpage_xqc_yxxq: 0, //需求池-意向需求(商机的)
                         custpage_xqc_bjxq: 0, //需求池-报价需求(商机的等待报价确认)
                         custpage_xqc_ddxq: 0, //需求池-订单需求(估价单)
+                        custpage_xqc_new_ddxq: 0, //需求池-订单需求(直接新建的估价单)
                         custpage_xqc_zxq: 0, //需求池-总需求
 
                         custpage_zqk: 0, //总缺口
@@ -1066,16 +1081,17 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                     for (var j = 0; j < gjd_arr.length; j++) {
                         if (hpArr[i].this_hp_id == gjd_arr[j].hp_id) {
                             return_info.custpage_xqc_ddxq += parseFloat(gjd_arr[j].hp_sl || 0);
+                            return_info.custpage_xqc_new_ddxq += parseFloat(gjd_arr[j].hp_new_sl || 0);
                         }
                     }
 
                     //计算总缺口
                     var zgy = return_info.custpage_gyc_kcn + return_info.custpage_gyc_ybj;// + return_info.custpage_gyc_yxd
                     return_info.custpage_gyc_zgy = zgy;
-                    var zxq = return_info.custpage_xqc_yxxq;// + return_info.custpage_xqc_ddxq(已在商机包含);// + return_info.custpage_xqc_bjxq(不同状态的商机) 
-                    return_info.custpage_xqc_zxq = zxq;
+                    // var zxq = return_info.custpage_xqc_yxxq;// + return_info.custpage_xqc_ddxq(已在商机包含);// + return_info.custpage_xqc_bjxq(不同状态的商机) 
+                    return_info.custpage_xqc_zxq = return_info.custpage_xqc_ddxq + return_info.custpage_xqc_new_ddxq;//已经有的商机转换的估价单 加上 直接新建的估价单需求
 
-                    return_info.custpage_zqk = zxq - zgy - return_info.custpage_kcc_kyl;// + return_info.custpage_cp_sl(已在商机包含); //总需求 - 总供应 - 可用量 + 当前自己 排除 的 数量
+                    return_info.custpage_zqk = zxq + return_info.custpage_cp_sl - zgy - return_info.custpage_kcc_kyl;//总需求 - 总供应 - 可用量 + 当前自己 排除 的 数量
 
                     if (return_info.custpage_zqk > 0) { //说明有缺口
                         return_str += '货品[' + return_info.custpage_cp_mc + '] 缺口数量:' + return_info.custpage_zqk + '   ';
