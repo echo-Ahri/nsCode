@@ -29,6 +29,8 @@ define(['N/file', 'N/runtime', 'N/log', 'N/search', 'N/record'],
             yg_id_arr.push(732); //默认添加 公司账户
             yg_id_arr.push(12257); //默认添加 公司账户-分配库存用
 
+            log.debug('员工', {'yg_id_arr': yg_id_arr});
+
             var obj = {};
             for (var i = 0; i < yg_id_arr.length; i++) {
                 obj[yg_id_arr[i]] = hp_id;
