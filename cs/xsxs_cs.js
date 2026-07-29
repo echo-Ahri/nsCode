@@ -59,12 +59,12 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             thisData = context.currentRecord;
             console.log('pageInit');
 
-            var submitconvert_dom = document.getElementById('tbl_submitconvert'); //保存并转换按钮
-            var secondarysubmitconvert_dom = document.getElementById('tbl_secondarysubmitconvert'); //保存并转换按钮
-            if (!(submitconvert_dom === null)) {
-                submitconvert_dom.parentElement.style.display = "none";
-                secondarysubmitconvert_dom.parentElement.style.display = "none";
-            }
+            // var submitconvert_dom = document.getElementById('tbl_submitconvert'); //保存并转换按钮
+            // var secondarysubmitconvert_dom = document.getElementById('tbl_secondarysubmitconvert'); //保存并转换按钮
+            // if (!(submitconvert_dom === null)) {
+            //     submitconvert_dom.parentElement.style.display = "none";
+            //     secondarysubmitconvert_dom.parentElement.style.display = "none";
+            // }
         }
 
         function fieldChanged(context) {
@@ -127,7 +127,7 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
         function xsZhKh(rec_id, rec_type) {
             console.log('xsZhKh');
 
-            this_record = record.load({ type: rec_type, id: rec_id });
+            this_record = record.load({ type: rec_type, id: rec_id, isDynamic: true });
 
             var email = this_record.getValue({ fieldId: 'email' });
             var salesrep = '', salesrepName = '';
