@@ -27,6 +27,9 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
 
         var thisData = {}; //存储当前对象记录的数据
         var is_tj_str = ''; //是否让提交 1可以提交, -1更改货品, -2插入行, -3删除行, -4添加行
+        var is_tj_res = 1; //是否让提交 1可以提交, -1更改货品, -2插入行, -3删除行, -4添加行
+        var thisInitItemNum; //当前子列表的数量
+        var is_sj_create = false; //是否是商机创建
 
         // 页面初始化时检查是否有提交结果并显示消息
         function pageInit(context) {
@@ -41,6 +44,11 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                 var sj_id = thisData.getValue({ fieldId: 'opportunity' }); //估价单记录的 商机字段
                 console.log('cjz_id', cjz_id, 'gjd_id', gjd_id, 'sj_id', sj_id);
 
+                if (!isEmpty(cjz_id) && !isEmpty(sj_id)) {
+                    is_sj_create = true; //是商机创建
+                    thisInitItemNum = new Map(); //当前加载时, 存入的货品数量
+                }
+
                 var fpbh_num = thisData.getValue({ fieldId: 'custbody_gjd_invoice_number' }); //估价单 发票编号字段
                 if (isEmpty(fpbh_num)) { //无发票编号 写入
                     // var this_year = new Date().getFullYear(); //当前年
@@ -51,6 +59,14 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
 
                 var item_count = thisData.getLineCount({ sublistId: item_type });
                 for (var i = 0; i < item_count; i++) {
+                    if (is_sj_create) {
+                        var hp_type = thisData.getSublistValue({ sublistId: item_type, fieldId: 'custcol_major_category', line: i });
+                        if (hp_type == 28) {
+                            var hp_id = thisData.getSublistValue({ sublistId: item_type, fieldId: 'id', line: i });
+                            var hp_num = thisData.getSublistValue({ sublistId: item_type, fieldId: 'quantity', line: i });
+                            thisInitItemNum.set(hp_id, hp_num);
+                        }
+                    }
                     if (/* !isEmpty(cjz_id) &&  */isEmpty(gjd_id)) { //注释掉 制作副本也要重置
                         //商机 / 制作副本 跳转过来 需要更新价格, 商机的询价后价格, 在估价单 应该是询价前价格
                         var xj_h_price = thisData.getSublistValue({ sublistId: item_type, fieldId: 'custcol_xj_h_price', line: i });
@@ -102,38 +118,125 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
         function fieldChanged(context) {
             console.log('fieldChanged');
             var change_field = context.fieldId; //当前改变的字段
+            if (is_sj_create) {
+                if (change_field == 'item') { //说明切换了货品
+                    var hp_id = thisData.getCurrentSublistValue({ sublistId: 'item', fieldId: 'id' });
+                    if (!isEmpty(hp_id)) {
+                        is_tj_res = -1;
+                        is_tj_str = '商机创建的估价单, 不允许修改货品信息! 请刷新!';
+                        dialog.alert({ title: '提示', message: is_tj_str });
+                    }
+                }
+            }
         }
 
         // 保存记录时的验证逻辑
         function saveRecord(context) {
             console.log('saveRecord');
+            var item_type = 'item';
             try {
                 var cjz_id = thisData.getValue({ fieldId: 'createdfrom' }); //估价单的 创建自 字段 
                 var gjd_id = thisData.getValue({ fieldId: 'id' }); //估价单的 自增长 字段 
                 var sj_id = thisData.getValue({ fieldId: 'opportunity' }); //估价单记录的 商机字段 
 
-                //保存时, 需要判断是否填写完业务员库存表
-                /* var itemType = 'item';
-                var hpItemCount = thisData.getLineCount({ sublistId: itemType }); // 获取子列表的行数 货品明细行
+                if (is_sj_create) {
+                    //先判断每行数量不能超过当前加载的数量
+                    var item_count = thisData.getLineCount({ sublistId: item_type });
+                    var gjdIteMap = new Map(); //最新编辑后, 保存时的估价单货品数量 先存, 后续再累加之前创建的估价单数量
+                    for (var i = 0; i < item_count; i++) {
+                        var hp_type = thisData.getSublistValue({ sublistId: item_type, fieldId: 'custcol_major_category', line: i });
+                        if (hp_type == 28) {
+                            var hp_id = thisData.getSublistValue({ sublistId: item_type, fieldId: 'id', line: i });
+                            var hp_item_id = thisData.getSublistValue({ sublistId: item_type, fieldId: 'item', line: i });
+                            var hp_name = thisData.getSublistValue({ sublistId: item_type, fieldId: 'item_display', line: i });
+                            var new_num = thisData.getSublistValue({ sublistId: item_type, fieldId: 'quantity', line: i }); //最新编辑后的数量
 
-                var ywy_kc_none_map = new Map(); //没有填写业务库存表的行
-                for (var i = 0; i < hpItemCount; i++) {
-                    var hp_type = thisData.getSublistValue({ sublistId: itemType, fieldId: 'custcol_major_category', line: i });
-                    if (hp_type != 28) {//产品大类，库存货品=28
-                        continue;
+                            var num_info = { 'hp_name': hp_name, 'this_num': new_num, 'search_num': 0 }; //先存进去
+                            if (gjdIteMap.has(hp_item_id)) {
+                                var this_num = gjdIteMap.get(hp_item_id).this_num; //先取出来
+                                num_info.this_num = new_num + this_num; //累加货品数量
+                            }
+                            gjdIteMap.set(hp_item_id, num_info); //当前的货品行数量
+
+                            var init_num = thisInitItemNum.get(hp_id); //加载时的货品数量
+                            if (thisInitItemNum.has(hp_id)) {
+                                if (new_num > init_num) { //当前行数量比刚加载时多, 不允许保存
+                                    is_tj_res = 0; //不让提交
+                                    is_tj_str += '货品: [' + hp_name + ']修改数量:[<b>' + new_num + '</b>]不能大于初始数量:[<b>' + init_num + '</b>] <br />';
+                                }
+                            } else {
+                                is_tj_res = 0; //不让提交
+                                is_tj_str += '存在修改货品行情况, 不允许提交! <br />';
+                            }
+                        }
                     }
-                    //当前货品关联业务员库存分配表id 货品-业务员 唯一
-                    var ywy_kc_id = thisData.getSublistValue({ sublistId: itemType, fieldId: 'custcol18', line: i }); //业务员库存分配表
-                    if (isEmpty(ywy_kc_id)) {//未填写业务员库存表
-                        var kc_none_key = thisData.getSublistValue({ sublistId: itemType, fieldId: 'item', line: i });
-                        var kc_none_val = thisData.getSublistValue({ sublistId: itemType, fieldId: 'item_display', line: i });
-                        ywy_kc_none_map.set(kc_none_key, kc_none_val);
+
+                    //再总体校验货品数量 取出商机的货品数量, 再用商机id查询所有估价单的货品数量, 如果超过则不让保存
+                    var sj_data = record.load({ type: 'opportunity', id: sj_id, isDynamic: true });
+                    var sj_count = sj_data.getLineCount({ sublistId: item_type }); // 获取子列表的行数 货品明细行
+                    var sjIteMap = new Map(); //商机的货品数量
+                    for (var i = 0; i < sj_count; i++) {
+                        var hp_type = sj_data.getSublistValue({ sublistId: item_type, fieldId: 'custcol_major_category', line: i });
+                        if (hp_type == 28) {
+                            var sj_item_id = sj_data.getSublistValue({ sublistId: item_type, fieldId: 'item', line: i }); //直接以货品id比较
+                            var sj_item_num = sj_data.getSublistValue({ sublistId: item_type, fieldId: 'quantity', line: i });
+                            if (sjIteMap.has(sj_item_id)) {
+                                sj_item_num = sj_item_num + (sjIteMap.get(sj_item_id));
+                            }
+                            sjIteMap.set(sj_item_id, sj_item_num);
+                        }
+                    }
+
+                    var tranid = thisData.getValue({ fieldId: 'tranid' }); //估价单号
+                    var filters = [ //取出商机已经创建的估价单
+                        ['opportunity', 'ANYOF', sj_id], //此商机创建
+                        'AND', ['tranid', 'ISNOT', tranid] //排除自己, 自己的值取当前的
+                    ];
+                    var search_data = search.create({ type: 'estimate', filters: filters, columns: ['internalid'] });
+                    search_data.run().each(function (res) {
+                        var search_gjd_id = res.getValue('internalid');
+                        // if(gjd_id == search_gjd_id) return; //跳过当前
+                        var gjd_data = record.load({ type: 'estimate', id: search_gjd_id, isDynamic: true });
+                        var gjd_count = gjd_data.getLineCount({ sublistId: item_type }); // 获取子列表的行数 货品明细行
+                        for (var i = 0; i < gjd_count; i++) {
+                            var hp_type = gjd_data.getSublistValue({ sublistId: item_type, fieldId: 'custcol_major_category', line: i });
+                            if (hp_type == 28) {
+                                var gjd_item_id = gjd_data.getSublistValue({ sublistId: item_type, fieldId: 'item', line: i }); //直接以货品id比较
+                                var gjd_item_num = gjd_data.getSublistValue({ sublistId: item_type, fieldId: 'quantity', line: i });
+                                if (gjdIteMap.has(gjd_item_id)) {
+                                    var num_info = gjdIteMap.get(gjd_item_id);
+                                    num_info.search_num = num_info.search_num + gjd_item_num;
+                                    gjdIteMap.set(gjd_item_id, num_info);
+                                } else {
+                                    is_tj_res = 0; //不让提交
+                                    is_tj_str += '存在修改货品行情况, 不允许提交! <br />';
+                                }
+                            }
+                        }
+                    });
+
+                    //比较商机货品数量 估价单货品数量
+                    gjdIteMap.forEach(function (num_info, item_id, map) {
+                        if (sjIteMap.has(item_id)) {
+                            var sj_num = sjIteMap.get(item_id);
+                            var use_num = num_info.this_num + num_info.search_num;
+                            if (use_num > sj_num) {
+                                is_tj_res = 0; //不让提交
+                                is_tj_str += '货品: [' + num_info.hp_name + ']超过商机货品总数量[<b>' + sj_num + '</b>], 不允许保存! 其他估价单使用数量[<b>' + num_info.search_num + '</b>]当前编辑数量:[<b>' + num_info.this_num + '</b>] <br /> ([' + sj_num + '] < [' + num_info.search_num + '] + [' + num_info.this_num + ']) <br />';
+                            }
+                        } else { //说明是商机都没有的货品
+                            is_tj_res = 0; //不让提交
+                            is_tj_str += '存在修改货品行情况, 不允许提交! <br />';
+                        }
+                    });
+
+                    //判断是否新增行, 插入行, 删除行, 切换货品
+                    if (is_tj_res <= 0) {
+                        dialog.alert({ title: '提示', message: is_tj_str });
+                        return false;
                     }
                 }
-                if (ywy_kc_none_map.size > 0) {
-                    dialog.alert({ title: '错误提示', message: '当前有货品行未选择业务员库存表, 校验库存失败, 请先选择业务员库存表', });
-                    return false;
-                } */
+
                 var xsdb_type = 'salesteam';
                 var xsdbItemCount = thisData.getLineCount({ sublistId: xsdb_type }); // 获取子列表的行数 销售代表
                 var xsdb_id = null;
@@ -221,12 +324,46 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
         //子列表删除验证逻辑
         function validateDelete(context) {
             console.log('validateDelete');
+            if (is_sj_create) {
+                var line = thisData.getCurrentSublistIndex({ sublistId: 'item' });
+                thisData.selectLine({ sublistId: 'item', line: line });
+                var hp_type = thisData.getCurrentSublistValue({ sublistId: 'item', fieldId: 'custcol_major_category' });
+                var hp_id = thisData.getCurrentSublistValue({ sublistId: 'item', fieldId: 'id' });
+                if (hp_type == 28 && !isEmpty(hp_id)) { //是货品
+                    console.log('hp_type', hp_type, 'hp_id', hp_id);
+                    // is_tj_res = -3;
+                    is_tj_str = '商机创建估价单, 不允许删除货品行!';
+                    dialog.alert({ title: '提示', message: is_tj_str });
+                    return false;
+                }
+            }
             return true;
         }
 
         //子列表添加逻辑
         function validateLine(context) {
             console.log('validateLine');
+            if (is_sj_create) {
+                var line = thisData.getCurrentSublistIndex({ sublistId: 'item' }); //当前行
+                thisData.selectLine({ sublistId: 'item', line: line });
+                var hp_type = thisData.getCurrentSublistValue({ sublistId: 'item', fieldId: 'custcol_major_category' });
+                console.log('line', line, 'hp_type', hp_type);
+                if (hp_type == 28) { //是货品
+                    var hp_id = thisData.getCurrentSublistValue({ sublistId: 'item', fieldId: 'id' });
+                    var check_copy = false;
+                    if (!isEmpty(hp_id)) { //存在复制嫌疑 制作副本, 复制上一项 操作
+                        var search_line = thisData.findSublistLineWithValue({ sublistId: 'item', fieldId: 'id', value: hp_id });
+                        check_copy = search_line != line; //不等于当前行 就是复制的其他行
+                    }
+                    console.log('line', line, 'search_line', search_line, 'hp_type', hp_type, 'hp_id', hp_id, 'check_copy', check_copy);
+                    if (isEmpty(hp_id) || check_copy) {
+                        // is_tj_res = -4;
+                        is_tj_str = '商机创建估价单, 不允许添加新货品行!';
+                        dialog.alert({ title: '提示', message: is_tj_str });
+                        return false;
+                    }
+                }
+            }
             return true;
         }
 
