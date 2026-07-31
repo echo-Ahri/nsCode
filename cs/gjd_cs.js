@@ -38,13 +38,14 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
             var item_type = 'item';
             try {
                 thisData.getField({ fieldId: 'exchangerate' }).isDisabled = false;  //汇率 销售业务专员系统不让编辑 放开
+                thisData.getField({ fieldId: 'opportunity' }).isDisabled = true;  //不让切换商机
 
                 var cjz_id = thisData.getValue({ fieldId: 'createdfrom' }); //估价单的 创建自 字段 
                 var gjd_id = thisData.getValue({ fieldId: 'id' }); //估价单的 自增长 字段 
                 var sj_id = thisData.getValue({ fieldId: 'opportunity' }); //估价单记录的 商机字段
                 console.log('cjz_id', cjz_id, 'gjd_id', gjd_id, 'sj_id', sj_id);
 
-                if (!isEmpty(cjz_id) && !isEmpty(sj_id)) {
+                if (!isEmpty(cjz_id) || !isEmpty(sj_id)) {
                     is_sj_create = true; //是商机创建
                     thisInitItemNum = new Map(); //当前加载时, 存入的货品数量
                 }
@@ -233,6 +234,8 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                     //判断是否新增行, 插入行, 删除行, 切换货品
                     if (is_tj_res <= 0) {
                         dialog.alert({ title: '提示', message: is_tj_str });
+                        is_tj_res = 1;
+                        is_tj_str = ''; //重置
                         return false;
                     }
                 }
