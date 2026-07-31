@@ -8,7 +8,6 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
         var currentUser = runtime.getCurrentUser(); //获取登录用户的角色
 
         var form = context.form;
-        // form.removeButton('convertlead'); //删除转换按钮
 
         var rec = context.newRecord; //当前打开的记录
         var rec_id = rec.id; //当前记录的id
@@ -16,25 +15,15 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
 
         //加载客户端脚本文件（已定义按钮需要调用的函数）
         var fileObj = file.load({
-            id: 'SuiteScripts/dsp_scripts/cs/xsxs_cs.js',
+            id: 'SuiteScripts/dsp_scripts/cs/xsxs_qzkh_kh_cs.js',
         });
         form.clientScriptFileId = fileObj.id;
         
-        var type = rec.getValue('isperson');
         var approveStatus = rec.getValue('custentity33'); //审批状态
-        // log.debug('type', {'type':type });
-
-        if (!isEmpty(rec_id) && type && approveStatus == 18) {  //是 个人 类型才能转换
-            form.addButton({
-                id: 'custpage_xszh_btn',
-                label: '[销售线索转换潜在客户]',
-                functionName: 'xsZhKh(' + rec_id + ',"' + rec_type + '")',
-            });
-        }
 
         if (!isEmpty(rec_id) && approveStatus != 32) { //不是申请退回状态
             form.addButton({
-                id: 'custpage_sqth_xs_btn',
+                id: 'custpage_sqth_btn',
                 label: '[申请退回]',
                 functionName: 'sqThEdit(' + rec_id + ',"' + rec_type + '")',
             });
