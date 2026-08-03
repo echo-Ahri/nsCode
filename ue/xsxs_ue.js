@@ -22,9 +22,12 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
         
         var type = rec.getValue('isperson');
         var approveStatus = rec.getValue('custentity33'); //审批状态
+        var custentity_is_repeat = rec.getValue('custentity_is_repeat'); //是否重复
         // log.debug('type', {'type':type });
 
-        if (!isEmpty(rec_id) && type && approveStatus == 18) {  //是 个人 类型才能转换
+        // 1.不是重复 任何时候都可以转换
+        // 2.是重复 必须审批通过才可以转
+        if (!isEmpty(rec_id) && type && ((approveStatus == 18 && custentity_is_repeat == 2) || custentity_is_repeat == 1)) { //是 个人 类型才能转换
             form.addButton({
                 id: 'custpage_xszh_btn',
                 label: '[销售线索转换潜在客户]',

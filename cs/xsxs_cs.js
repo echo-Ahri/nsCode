@@ -93,19 +93,19 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             }
 
             if (isperson == 'F') { //是公司类型 需要校验地址
-                var addressbook_count = thisData.getLineCount({ sublistId: 'addressbook' });
-                console.log('addressbook_count', addressbook_count);
-                if (addressbook_count <= 0) {
-                    is_tj = false;
-                    is_tj_str += ' ' + '是公司类型 需要填写地址';
-                }
+                // var addressbook_count = thisData.getLineCount({ sublistId: 'addressbook' });
+                // console.log('addressbook_count', addressbook_count);
+                // if (addressbook_count <= 0) {
+                //     is_tj = false;
+                //     is_tj_str += ' ' + '是公司类型 需要填写地址';
+                // }
 
-                var contactroles_count = thisData.getLineCount({ sublistId: 'contactroles' });
-                console.log('contactroles_count', contactroles_count);
-                if (contactroles_count <= 0) {  //公司类型校验子列表 个人类型名称已经是必填
-                    is_tj = false;
-                    is_tj_str += ' ' + '是公司类型 需要填写联系人';
-                }
+                // var contactroles_count = thisData.getLineCount({ sublistId: 'contactroles' });
+                // console.log('contactroles_count', contactroles_count);
+                // if (contactroles_count <= 0) {  //公司类型校验子列表 个人类型名称已经是必填
+                //     is_tj = false;
+                //     is_tj_str += ' ' + '是公司类型 需要填写联系人';
+                // }
             } else {
                 var firstname = thisData.getValue({ fieldId: 'firstname' });
                 if (isEmpty(firstname)) {
@@ -187,6 +187,8 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             }
 
             if (!isEmpty(ssr)) {
+                thisData.setValue({ fieldId: 'custentity_is_repeat', value: 2 }); //写入已重复
+
                 thisData.setValue({ fieldId: 'custentity10', value: ssr_name }); //所属业务员
 
                 var xsdb_type = 'salesteam';
@@ -279,8 +281,11 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 }
 
                 if (!isEmpty(ssr)) {
-                    dialog.confirm({ title: '提示', message: '检索到电子邮箱已在客户中重复, 点击[OK]将获取对应所属人[' + ssr_name + ']填写至当前所属业务员后再跳转至转换客户!' }).then(function (result) {
+                    // dialog.confirm({ title: '提示', message: '检索到电子邮箱已在客户中重复, 点击[OK]将获取对应所属人[' + ssr_name + ']填写至当前所属业务员后再跳转至转换客户!' }).then(function (result) {
+                    dialog.confirm({ title: '提示', message: '检索到电子邮箱已在客户中重复, 点击[OK]将获取对应所属人[' + ssr_name + ']填写至当前所属业务员并标记为已重复!' }).then(function (result) {
                         if (result) {
+                            this_record.setValue({ fieldId: 'custentity_is_repeat', value: 2 }); //写入已重复
+
                             this_record.setValue({ fieldId: 'custentity10', value: ssr_name }); //所属业务员
 
                             var xsdb_type = 'salesteam';
@@ -295,11 +300,15 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                             this_record.commitLine({ sublistId: xsdb_type });
                             this_record.save();
 
-                            window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id;
+                            var approveStatus = this_record.getValue('custentity33'); //审批状态
+
+                            if(approveStatus == 18) window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id; //审批通过
                         } else {
                             dialog.alert({ title: '提示', message: '点击取消, 不去转换客户!' });
                         }
                     });
+                }else{
+                    window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id; //审批通过
                 }
             } else {
                 dialog.alert({ title: '提示', message: '未填写对应电子邮箱|电话, 不能去转换客户!' });
