@@ -47,7 +47,7 @@ define(['N/ui/serverWidget', 'N/search', 'N/redirect', 'N/runtime', 'N/ui/messag
 						//设置字段，直接写数据库
 						record.submitFields({
 							type: recType, id: recId,
-							values: { 'custentity_kh_th_remark': comment, 'custentity33': 32 }, //申请退回状态
+							values: { 'custentity_kh_th_remark': comment, 'custentity33': 4 }, //申请退回状态
 							options: { enableSourcing: false, ignoreMandatoryFields: true },
 						});
 					} catch (e) {

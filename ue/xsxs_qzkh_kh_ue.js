@@ -21,7 +21,7 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
         
         var approveStatus = rec.getValue('custentity33'); //审批状态
 
-        if (!isEmpty(rec_id) && approveStatus != 32) { //不是申请退回状态
+        if (!isEmpty(rec_id) && approveStatus != 4) { //不是申请退回状态
             form.addButton({
                 id: 'custpage_sqth_btn',
                 label: '[申请退回]',

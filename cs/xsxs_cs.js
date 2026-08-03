@@ -210,7 +210,7 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             }
         }
 
-        function xsZhKh(rec_id, rec_type) {
+        function xsZhKh(rec_id, rec_type, zh_type) {
             console.log('xsZhKh');
 
             this_record = record.load({ type: rec_type, id: rec_id, isDynamic: true });
@@ -298,11 +298,16 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                             this_record.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'employee', value: ssr, ignoreFieldChange: true });
                             this_record.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'salesrole', value: -2, ignoreFieldChange: true });
                             this_record.commitLine({ sublistId: xsdb_type });
-                            this_record.save();
-
+                            
                             var approveStatus = this_record.getValue('custentity33'); //审批状态
-
-                            if(approveStatus == 18) window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id; //审批通过
+                            if(approveStatus == 3){
+                                if(zh_type == 'GS'){
+                                    this_record.setValue({ fieldId: 'entitystatus', value: 38 }); //写为潜在客户 潜在客户-Active - New Prospect
+                                }else{ //个人跳转链接去转换
+                                    window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id;
+                                }
+                            } //审批通过
+                            this_record.save();
                         } else {
                             dialog.alert({ title: '提示', message: '点击取消, 不去转换客户!' });
                         }
