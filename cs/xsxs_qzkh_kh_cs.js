@@ -72,7 +72,8 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 }
 
                 if (!is_tj) {
-                    return window.confirm(is_tj_str);
+                    dialog.alert({ title: '提示', message: is_tj_str});
+                    return false;
                 } else {
                     return true;
                 }

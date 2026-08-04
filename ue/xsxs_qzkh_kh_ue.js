@@ -19,9 +19,10 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
         });
         form.clientScriptFileId = fileObj.id;
         
-        var approveStatus = rec.getValue('custentity33'); //审批状态
-
-        if (!isEmpty(rec_id) && approveStatus != 4) { //不是申请退回状态
+        var approveStatus = parseInt(rec.getValue('custentity33')); //审批状态
+        var sqth_arr = [2, 3, 6, 7, 9, 10]; //销售线索已提交待审核 销售线索审核通过 潜在客户已提交待审核 潜在客户审核通过 客户已提交待审核 客户审核通过
+        // log.debug('approveStatus', {'approveStatus':approveStatus, '1': sqth_arr.includes(approveStatus) });
+        if (!isEmpty(rec_id) && sqth_arr.includes(approveStatus)) {
             form.addButton({
                 id: 'custpage_sqth_btn',
                 label: '[申请退回]',

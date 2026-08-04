@@ -60,12 +60,12 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             thisData = context.currentRecord;
             console.log('pageInit');
 
-            // var submitconvert_dom = document.getElementById('tbl_submitconvert'); //保存并转换按钮
-            // var secondarysubmitconvert_dom = document.getElementById('tbl_secondarysubmitconvert'); //保存并转换按钮
-            // if (!(submitconvert_dom === null)) {
-            //     submitconvert_dom.parentElement.style.display = "none";
-            //     secondarysubmitconvert_dom.parentElement.style.display = "none";
-            // }
+            var submitconvert_dom = document.getElementById('tbl_submitconvert'); //保存并转换按钮
+            var secondarysubmitconvert_dom = document.getElementById('tbl_secondarysubmitconvert'); //保存并转换按钮
+            if (!(submitconvert_dom === null)) {
+                submitconvert_dom.parentElement.style.display = "none";
+                secondarysubmitconvert_dom.parentElement.style.display = "none";
+            }
         }
 
         function fieldChanged(context) {
@@ -216,7 +216,7 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             this_record = record.load({ type: rec_type, id: rec_id, isDynamic: true });
 
             var email = this_record.getValue({ fieldId: 'email' });
-            var phone = thisData.getValue({ fieldId: 'phone' });
+            var phone = this_record.getValue({ fieldId: 'phone' });
             var salesrep = '', salesrepName = '';
             var salesrep_tel = '', salesrepName_tel = '';
             var create_date = '', create_date_tel = '';
@@ -298,21 +298,26 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                             this_record.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'employee', value: ssr, ignoreFieldChange: true });
                             this_record.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'salesrole', value: -2, ignoreFieldChange: true });
                             this_record.commitLine({ sublistId: xsdb_type });
-                            
+
                             var approveStatus = this_record.getValue('custentity33'); //审批状态
-                            if(approveStatus == 3){
-                                if(zh_type == 'GS'){
-                                    this_record.setValue({ fieldId: 'entitystatus', value: 38 }); //写为潜在客户 潜在客户-Active - New Prospect
-                                }else{ //个人跳转链接去转换
+                            console.log(approveStatus);
+                            if (approveStatus == 3) { //审批通过
+                                if (zh_type == 'GS') {
+                                    this_record.setValue({ fieldId: 'entitystatus', value: 22 }); //写为潜在客户 潜在客户-Active - New Prospect
+                                    this_record.save();
+                                    window.location.reload();
+                                } else { //个人跳转链接去转换
+                                    this_record.save();
                                     window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id;
                                 }
-                            } //审批通过
-                            this_record.save();
+                            } else {
+                                this_record.save();
+                            }
                         } else {
                             dialog.alert({ title: '提示', message: '点击取消, 不去转换客户!' });
                         }
                     });
-                }else{
+                } else {
                     window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id; //审批通过
                 }
             } else {

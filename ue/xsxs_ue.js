@@ -8,7 +8,7 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
         var currentUser = runtime.getCurrentUser(); //获取登录用户的角色
 
         var form = context.form;
-        // form.removeButton('convertlead'); //删除转换按钮
+        form.removeButton('convertlead'); //删除转换按钮
 
         var rec = context.newRecord; //当前打开的记录
         var rec_id = rec.id; //当前记录的id
@@ -21,7 +21,7 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
         form.clientScriptFileId = fileObj.id;
         
         var type = rec.getValue('isperson');
-        var approveStatus = rec.getValue('custentity33'); //审批状态
+        var approveStatus = parseInt(rec.getValue('custentity33')); //审批状态
         var custentity_is_repeat = rec.getValue('custentity_is_repeat'); //是否重复
         // log.debug('type', {'type':type });
         // log.debug('pageMode', {'pageMode':pageMode });
@@ -44,7 +44,8 @@ define(['N/file', 'N/log', 'N/runtime', 'N/url', 'N/record', 'N/search', 'N/conf
             });
         }
 
-        if (!isEmpty(rec_id) && approveStatus != 4) { //不是申请退回状态
+        var sqth_arr = [2, 3, 6, 7, 9, 10]; //销售线索已提交待审核 销售线索审核通过 潜在客户已提交待审核 潜在客户审核通过 客户已提交待审核 客户审核通过
+        if (!isEmpty(rec_id) && sqth_arr.includes(approveStatus)) {
             form.addButton({
                 id: 'custpage_sqth_xs_btn',
                 label: '[申请退回]',
