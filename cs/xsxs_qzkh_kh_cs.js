@@ -18,6 +18,42 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
 
         var thisData = {}; //存储当前对象记录的数据
 
+        var DUPE_EXCLUDED_DOMAINS = [ //排除的域
+            'adelphia',
+            'altavista',
+            'ameritech',
+            'aol',
+            'att',
+            'attbi',
+            'bellsouth',
+            'bigfoot',
+            'comcast',
+            'cox',
+            'earthlink',
+            'excite',
+            'gmail',
+            'home',
+            'hotmail',
+            'ix.netcom',
+            'juno',
+            'lycos',
+            'mail',
+            'mindspring',
+            'msn',
+            'netscape',
+            'netzero',
+            'pacbell',
+            'prodigy',
+            'qwest',
+            'sbcglobal',
+            'swbell',
+            'sympatico',
+            'verizon',
+            'worldnet.att',
+            'yahoo',
+            'qq',
+        ];
+
         // 页面初始化时检查是否有提交结果并显示消息
         function pageInit(context) {
             thisData = context.currentRecord;
@@ -40,6 +76,16 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 var phone = thisData.getValue({ fieldId: 'phone' });
                 var isperson = thisData.getValue({ fieldId: 'isperson' });
                 var companyname = thisData.getValue({ fieldId: 'companyname' });
+                var email = thisData.getValue({ fieldId: 'email' });
+                var this_id = context.currentRecord.id;
+
+                if(type == 'customer' && isEmpty(this_id)){
+                    dialog.alert({ title: '提示', message: '客户不允许新建, 请去创建销售线索转换!' });
+                    return false;
+                }
+
+                var is_repeat = false; //默认不重复
+                var custentity_is_repeat = 1; //1不重复 2已重复
 
                 if (isEmpty(companyname)) {
                     is_tj = false;
@@ -72,8 +118,68 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 }
 
                 if (!is_tj) {
-                    dialog.alert({ title: '提示', message: is_tj_str});
+                    dialog.alert({ title: '提示', message: is_tj_str });
                     return false;
+                }
+
+                if (!isEmpty(email)) { //有填写邮件需要检验 先取@后域名 不是类似qq的域名(排除的域DUPE_EXCLUDED_DOMAINS) 直接根据后缀去查 否则查所有
+                    // 是类似xx@qq.com第三方平台的邮箱, 就查全部邮箱地址
+                    var filters = [
+                        ['isinactive', 'IS', 'F']
+                        // , 'AND', ['stage', 'ANYOF', ['PROSPECT', 'CUSTOMER']] //['LEAD', 'PROSPECT', 'CUSTOMER'] 
+                    ];
+
+                    if (this_id) { //排除编辑时 自己
+                        filters.push('AND');
+                        filters.push(['internalid', 'NONEOF', this_id]);
+                    }
+
+                    var domain = email.split('@')[1].toLowerCase();
+                    var hz = domain.split('.')[0];
+                    // var hz = email.split('@')[1].split('.')[0]; //邮箱@后 .前的内容
+                    console.log('hz', hz);
+                    if (DUPE_EXCLUDED_DOMAINS.includes(hz)) { //是排除的域 例如qq这种第三方平台 查所有
+                        filters.push('AND');
+                        filters.push(['email', 'IS', email]); //查询电子邮箱
+                    } else {
+                        filters.push('AND');
+                        filters.push(['email', 'CONTAINS', '@' + domain]); //查询电子邮箱
+                    }
+                    var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'salesrep', 'email', 'datecreated'] });
+                    search_data.run().each(function (res) {
+                        salesrep = res.getValue('salesrep'); //能查到
+
+                        is_repeat = true; //重复
+                        custentity_is_repeat = 2;
+                        return false;
+                    });
+                }
+
+                if (!isEmpty(phone)) {
+                    var filters = [
+                        ['isinactive', 'IS', 'F']
+                        , 'AND', ['phone', 'IS', phone]
+                    ];
+
+                    var this_id = context.currentRecord.id;
+                    if (this_id) { //排除编辑时 自己
+                        filters.push('AND');
+                        filters.push(['internalid', 'NONEOF', this_id]);
+                    }
+
+                    var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'salesrep', 'phone', 'datecreated'] });
+                    search_data.run().each(function (res) {
+                        salesrep_tel = res.getValue('salesrep'); //能查到
+
+                        is_repeat = true; //重复
+                        custentity_is_repeat = 2;
+                        return false;
+                    });
+                }
+
+                thisData.setValue({ fieldId: 'custentity_is_repeat', value: custentity_is_repeat }); //写入 是否重复
+                if (is_repeat) {
+                    return window.confirm('检索到电子邮箱|电话已在 销售线索|潜在客户|客户 中重复, 确认将保存为已重复!');
                 } else {
                     return true;
                 }

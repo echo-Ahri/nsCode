@@ -115,19 +115,28 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             }
 
             if (!is_tj) {
-                return window.confirm(is_tj_str);
+                dialog.alert({ title: '提示', message: is_tj_str });
+                return false;
             }
 
             var email = thisData.getValue({ fieldId: 'email' });
             var phone = thisData.getValue({ fieldId: 'phone' });
-            var salesrep = '', salesrepName = '';
-            var salesrep_tel = '', salesrepName_tel = '';
-            var create_date = '', create_date_tel = '';
+            var is_repeat = false; //默认不重复
+            var custentity_is_repeat = 1; //1不重复 2已重复
+
             if (!isEmpty(email)) { //有填写邮件需要检验 先取@后域名 不是类似qq的域名(排除的域DUPE_EXCLUDED_DOMAINS) 直接根据后缀去查 否则查所有
                 // 是类似xx@qq.com第三方平台的邮箱, 就查全部邮箱地址
                 var filters = [
                     ['isinactive', 'IS', 'F']
+                    // , 'AND', ['stage', 'ANYOF', ['LEAD']] //['LEAD', 'PROSPECT', 'CUSTOMER'] 
                 ];
+
+                var this_id = context.currentRecord.id;
+                if (this_id) { //排除编辑时 自己
+                    filters.push('AND');
+                    filters.push(['internalid', 'NONEOF', this_id]);
+                }
+
                 var domain = email.split('@')[1].toLowerCase();
                 var hz = domain.split('.')[0];
                 // var hz = email.split('@')[1].split('.')[0]; //邮箱@后 .前的内容
@@ -143,8 +152,9 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'salesrep', 'email', 'datecreated'] });
                 search_data.run().each(function (res) {
                     salesrep = res.getValue('salesrep'); //能查到
-                    create_date = res.getValue('datecreated'); //时间
-                    salesrepName = res.getText('salesrep');
+
+                    is_repeat = true; //重复
+                    custentity_is_repeat = 2;
                     return false;
                 });
             }
@@ -154,57 +164,26 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                     ['isinactive', 'IS', 'F']
                     , 'AND', ['phone', 'IS', phone]
                 ];
+
+                var this_id = context.currentRecord.id;
+                if (this_id) { //排除编辑时 自己
+                    filters.push('AND');
+                    filters.push(['internalid', 'NONEOF', this_id]);
+                }
+
                 var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'salesrep', 'phone', 'datecreated'] });
                 search_data.run().each(function (res) {
                     salesrep_tel = res.getValue('salesrep'); //能查到
-                    create_date_tel = res.getValue('datecreated'); //时间
-                    salesrepName_tel = res.getText('salesrep');
+
+                    is_repeat = true; //重复
+                    custentity_is_repeat = 2;
                     return false;
                 });
             }
 
-            var ssr = '', ssr_name = '';
-            if (!isEmpty(salesrep) && !isEmpty(salesrep_tel)) {
-                if (salesrep == salesrep_tel) {
-                    ssr = salesrep;
-                    ssr_name = salesrepName;
-                } else { //判断那个先创建
-                    console.log('create_date', create_date, 'create_date_tel', create_date_tel);
-                    if (create_date > create_date_tel) {
-                        ssr = salesrep_tel;
-                        ssr_name = salesrepName_tel;
-                    } else {
-                        ssr = salesrep;
-                        ssr_name = salesrepName;
-                    }
-                }
-            } else if (!isEmpty(salesrep) && isEmpty(salesrep_tel)) {
-                ssr = salesrep;
-                ssr_name = salesrepName;
-            } else if (isEmpty(salesrep) && !isEmpty(salesrep_tel)) {
-                ssr = salesrep_tel;
-                ssr_name = salesrepName_tel;
-            }
-
-            if (!isEmpty(ssr)) {
-                thisData.setValue({ fieldId: 'custentity_is_repeat', value: 2 }); //写入已重复
-
-                thisData.setValue({ fieldId: 'custentity10', value: ssr_name }); //所属业务员
-
-                var xsdb_type = 'salesteam';
-                var xsdbItemCount = thisData.getLineCount({ sublistId: xsdb_type }); // 获取子列表的行数 销售代表
-                for (var i = 0; i < xsdbItemCount; i++) {
-                    thisData.removeLine({ sublistId: xsdb_type, line: i, ignoreRecalc: true }); //先删除所有销售代表
-                }
-                thisData.selectNewLine({ sublistId: xsdb_type });
-                thisData.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'contribution', value: 100, ignoreFieldChange: true });
-                thisData.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'employee', value: ssr, ignoreFieldChange: true });
-                thisData.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'salesrole', value: -2, ignoreFieldChange: true });
-                thisData.commitLine({ sublistId: xsdb_type });
-            }
-
-            if (!isEmpty(ssr)) {
-                return window.confirm('检索到电子邮箱|电话已在客户中重复, 将获取所属人[' + ssr_name + ']填写至当前所属业务员!');
+            thisData.setValue({ fieldId: 'custentity_is_repeat', value: custentity_is_repeat }); //写入 是否重复
+            if (is_repeat) {
+                return window.confirm('检索到电子邮箱|电话已在 销售线索|潜在客户|客户 中重复, 确认将保存为已重复!');
             } else {
                 return true;
             }
@@ -217,108 +196,53 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
 
             var email = this_record.getValue({ fieldId: 'email' });
             var phone = this_record.getValue({ fieldId: 'phone' });
-            var salesrep = '', salesrepName = '';
-            var salesrep_tel = '', salesrepName_tel = '';
-            var create_date = '', create_date_tel = '';
+            var custentity_is_repeat = this_record.getValue({ fieldId: 'custentity_is_repeat' });
+            var approveStatus = this_record.getValue({ fieldId: 'approveStatus' });
             if (!isEmpty(email) && !isEmpty(phone)) { //有填写邮件需要检验 先取@后域名 不是类似qq的域名(排除的域DUPE_EXCLUDED_DOMAINS) 直接根据后缀去查 否则查所有
-                // 是类似xx@qq.com第三方平台的邮箱, 就查全部邮箱地址
-                var filters = [
-                    ['isinactive', 'IS', 'F']
-                ];
-                var domain = email.split('@')[1].toLowerCase();
-                var hz = domain.split('.')[0];
-                // var hz = email.split('@')[1].split('.')[0]; //邮箱@后 .前的内容
-                console.log('hz', hz);
-                if (DUPE_EXCLUDED_DOMAINS.includes(hz)) { //是排除的域 例如qq这种第三方平台 查所有
-                    filters.push('AND');
-                    filters.push(['email', 'IS', email]); //查询电子邮箱
-                } else {
-                    filters.push('AND');
-                    filters.push(['email', 'CONTAINS', '@' + domain]); //查询电子邮箱
-                    // filters.push(['email', 'CONTAINS', hz]); //查询电子邮箱
-                }
-                var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'salesrep', 'email', 'datecreated'] });
-                search_data.run().each(function (res) {
-                    salesrep = res.getValue('salesrep'); //能查到
-                    create_date = res.getValue('datecreated'); //时间
-                    salesrepName = res.getText('salesrep');
-                    return false;
-                });
-
-                var filters = [
-                    ['isinactive', 'IS', 'F']
-                    , 'AND', ['phone', 'IS', phone]
-                ];
-                var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'salesrep', 'phone', 'datecreated'] });
-                search_data.run().each(function (res) {
-                    salesrep_tel = res.getValue('salesrep'); //能查到
-                    create_date_tel = res.getValue('datecreated'); //时间
-                    salesrepName_tel = res.getText('salesrep');
-                    return false;
-                });
-
-                var ssr = '', ssr_name = '';
-                if (!isEmpty(salesrep) && !isEmpty(salesrep_tel)) {
-                    if (salesrep == salesrep_tel) {
-                        ssr = salesrep;
-                        ssr_name = salesrepName;
-                    } else { //判断那个先创建
-                        console.log('create_date', create_date, 'create_date_tel', create_date_tel);
-                        if (create_date > create_date_tel) {
-                            ssr = salesrep_tel;
-                            ssr_name = salesrepName_tel;
-                        } else {
-                            ssr = salesrep;
-                            ssr_name = salesrepName;
-                        }
-                    }
-                } else if (!isEmpty(salesrep) && isEmpty(salesrep_tel)) {
-                    ssr = salesrep;
-                    ssr_name = salesrepName;
-                } else if (isEmpty(salesrep) && !isEmpty(salesrep_tel)) {
-                    ssr = salesrep_tel;
-                    ssr_name = salesrepName_tel;
-                }
-
-                if (!isEmpty(ssr)) {
-                    // dialog.confirm({ title: '提示', message: '检索到电子邮箱已在客户中重复, 点击[OK]将获取对应所属人[' + ssr_name + ']填写至当前所属业务员后再跳转至转换客户!' }).then(function (result) {
-                    dialog.confirm({ title: '提示', message: '检索到电子邮箱已在客户中重复, 点击[OK]将获取对应所属人[' + ssr_name + ']填写至当前所属业务员并标记为已重复!' }).then(function (result) {
+                if (custentity_is_repeat == 2) {
+                    dialog.confirm({ title: '提示', message: '检测到此销售线索已标记重复' }).then(function (result) {
                         if (result) {
-                            this_record.setValue({ fieldId: 'custentity_is_repeat', value: 2 }); //写入已重复
-
-                            this_record.setValue({ fieldId: 'custentity10', value: ssr_name }); //所属业务员
-
-                            var xsdb_type = 'salesteam';
-                            var xsdbItemCount = this_record.getLineCount({ sublistId: xsdb_type }); // 获取子列表的行数 销售代表
-                            for (var i = 0; i < xsdbItemCount; i++) {
-                                this_record.removeLine({ sublistId: xsdb_type, line: i, ignoreRecalc: true }); //先删除所有销售代表
-                            }
-                            this_record.selectNewLine({ sublistId: xsdb_type });
-                            this_record.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'contribution', value: 100, ignoreFieldChange: true });
-                            this_record.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'employee', value: ssr, ignoreFieldChange: true });
-                            this_record.setCurrentSublistValue({ sublistId: xsdb_type, fieldId: 'salesrole', value: -2, ignoreFieldChange: true });
-                            this_record.commitLine({ sublistId: xsdb_type });
-
-                            var approveStatus = this_record.getValue('custentity33'); //审批状态
-                            console.log(approveStatus);
                             if (approveStatus == 3) { //审批通过
                                 if (zh_type == 'GS') {
-                                    this_record.setValue({ fieldId: 'entitystatus', value: 22 }); //写为潜在客户 潜在客户-Active - New Prospect
-                                    this_record.save();
-                                    window.location.reload();
+                                    dialog.confirm({ title: '提示', message: '此销售线索未重复, 且是公司类型, 点击[Ok]将直接转换为潜在客户' }).then(function (result) {
+                                        if (result) {
+                                            this_record.setValue({ fieldId: 'entitystatus', value: 22 }); //写为潜在客户 潜在客户-Active - New Prospect
+                                            this_record.save();
+                                            window.location.reload();
+                                        }
+                                    });
                                 } else { //个人跳转链接去转换
-                                    this_record.save();
-                                    window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id;
+                                    dialog.confirm({ title: '提示', message: '此销售线索未重复, 且是个人类型, 点击[Ok]将跳转至链接转换为潜在客户' }).then(function (result) {
+                                        if (result) {
+                                            this_record.save();
+                                            window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id;
+                                        }
+                                    });
                                 }
                             } else {
-                                this_record.save();
+                                dialog.alert({ title: '提示', message: '当前销售线索状态未审批通过, 不能去转换客户!' });
                             }
                         } else {
                             dialog.alert({ title: '提示', message: '点击取消, 不去转换客户!' });
                         }
                     });
                 } else {
-                    window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id; //审批通过
+                    if (zh_type == 'GS') {
+                        dialog.confirm({ title: '提示', message: '此销售线索未重复, 且是公司类型, 点击[Ok]将直接转换为潜在客户' }).then(function (result) {
+                            if (result) {
+                                this_record.setValue({ fieldId: 'entitystatus', value: 22 }); //写为潜在客户 潜在客户-Active - New Prospect
+                                this_record.save();
+                                window.location.reload();
+                            }
+                        });
+                    } else { //个人跳转链接去转换
+                        dialog.confirm({ title: '提示', message: '此销售线索未重复, 且是个人类型, 点击[Ok]将跳转至链接转换为潜在客户' }).then(function (result) {
+                            if (result) {
+                                this_record.save();
+                                window.location.href = '/app/crm/sales/convertlead.nl?id=' + rec_id;
+                            }
+                        });
+                    }
                 }
             } else {
                 dialog.alert({ title: '提示', message: '未填写对应电子邮箱|电话, 不能去转换客户!' });
