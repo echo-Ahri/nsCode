@@ -114,6 +114,24 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 }
             }
 
+            var xsdb_type = 'salesteam';
+            var salesteam_count = thisData.getLineCount({ sublistId: xsdb_type });
+            if (salesteam_count <= 0) {
+                is_tj = false;
+                is_tj_str += ' ' + '请设置销售团队, 勾选为主要!';
+            } else {
+                var xsdbItemCount = thisData.getLineCount({ sublistId: xsdb_type }); // 获取子列表的行数 销售代表
+                var is_zy = false;
+                for (var i = 0; i < xsdbItemCount; i++) {
+                    var is_zy_str = thisData.getSublistValue({ sublistId: xsdb_type, fieldId: 'isprimary', line: i });
+                    if (is_zy_str) is_zy = true;
+                }
+                if (!is_zy) {
+                    is_tj = false;
+                    is_tj_str += ' ' + '销售代表不能为空, 请编辑勾选销售团队的主要人员!';
+                }
+            }
+
             if (!is_tj) {
                 dialog.alert({ title: '提示', message: is_tj_str });
                 return false;
@@ -199,6 +217,23 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             var custentity_is_repeat = this_record.getValue({ fieldId: 'custentity_is_repeat' });
             var approveStatus = this_record.getValue({ fieldId: 'approveStatus' });
             if (!isEmpty(email) && !isEmpty(phone)) { //有填写邮件需要检验 先取@后域名 不是类似qq的域名(排除的域DUPE_EXCLUDED_DOMAINS) 直接根据后缀去查 否则查所有
+                
+                var isperson = this_record.getValue({ fieldId: 'isperson' });
+                var custentity_lxr_dz_empty = true;
+                if (isperson == 'F') { //是公司类型 需要校验地址
+                    var addressbook_count = this_record.getLineCount({ sublistId: 'addressbook' });
+                    if (addressbook_count <= 0) {
+                        custentity_lxr_dz_empty = false;
+                    }
+
+                    var contactroles_count = this_record.getLineCount({ sublistId: 'contactroles' });
+                    if (contactroles_count <= 0) {  //公司类型校验子列表 个人类型名称已经是必填
+                        custentity_lxr_dz_empty = false;
+                    }
+                }
+                console.log('custentity_lxr_dz_empty', custentity_lxr_dz_empty);
+                this_record.setValue({ fieldId: 'custentity_lxr_dz_empty', value: custentity_lxr_dz_empty }); //设置 检索的 联系人|地址是否已填写
+
                 if (custentity_is_repeat == 2) {
                     dialog.confirm({ title: '提示', message: '检测到此销售线索已标记重复' }).then(function (result) {
                         if (result) {

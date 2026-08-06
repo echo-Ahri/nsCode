@@ -79,7 +79,7 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 var email = thisData.getValue({ fieldId: 'email' });
                 var this_id = context.currentRecord.id;
 
-                if(type == 'customer' && isEmpty(this_id)){
+                if (type == 'customer' && isEmpty(this_id)) {
                     dialog.alert({ title: '提示', message: '客户不允许新建, 请去创建销售线索转换!' });
                     return false;
                 }
@@ -97,16 +97,20 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 }
 
                 // console.log('isperson', isperson);
+                var custentity_lxr_dz_empty = true;
                 if (isperson == 'F') { //是公司类型 需要校验地址
                     var addressbook_count = thisData.getLineCount({ sublistId: 'addressbook' });
                     if (addressbook_count <= 0) {
                         is_tj = false;
+                        custentity_lxr_dz_empty = false;
                         is_tj_str += ' ' + '是公司类型 需要填写地址';
                     }
 
-                    var contactroles_count = thisData.getLineCount({ sublistId: 'contactroles' });
+                    this_record = record.load({ type: type, id: this_id, isDynamic: true });
+                    var contactroles_count = this_record.getLineCount({ sublistId: 'contactroles' });
                     if (contactroles_count <= 0) {  //公司类型校验子列表 个人类型名称已经是必填
                         is_tj = false;
+                        custentity_lxr_dz_empty = false;
                         is_tj_str += ' ' + '是公司类型 需要填写联系人';
                     }
                 } else {
@@ -114,6 +118,25 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                     if (isEmpty(firstname)) {
                         is_tj = false;
                         is_tj_str += ' ' + '是个人类型 名称必须填写';
+                    }
+                }
+                thisData.setValue({ fieldId: 'custentity_lxr_dz_empty', value: custentity_lxr_dz_empty }); //设置 检索的 联系人|地址是否已填写
+
+                var xsdb_type = 'salesteam';
+                var salesteam_count = thisData.getLineCount({ sublistId: xsdb_type });
+                if (salesteam_count <= 0) {
+                    is_tj = false;
+                    is_tj_str += ' ' + '请设置销售团队, 勾选为主要!';
+                } else {
+                    var xsdbItemCount = thisData.getLineCount({ sublistId: xsdb_type }); // 获取子列表的行数 销售代表
+                    var is_zy = false;
+                    for (var i = 0; i < xsdbItemCount; i++) {
+                        var is_zy_str = thisData.getSublistValue({ sublistId: xsdb_type, fieldId: 'isprimary', line: i });
+                        if (is_zy_str) is_zy = true;
+                    }
+                    if (!is_zy) {
+                        is_tj = false;
+                        is_tj_str += ' ' + '销售代表不能为空, 请编辑勾选销售团队的主要人员!';
                     }
                 }
 
