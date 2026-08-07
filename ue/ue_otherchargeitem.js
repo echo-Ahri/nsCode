@@ -66,11 +66,14 @@ define(['N/record', 'N/search', 'N/log', 'N/render', 'N/runtime', 'N/email', 'N/
             var from_point_id = currentRecord.getValue({ fieldId: 'custitem_from_point' });//起运地id
             var to_point_id = currentRecord.getValue({ fieldId: 'custitem_to_point' });//目的地id
 
-            var broad_heading = currentRecord.getText({ fieldId: 'custitem_fee_broad_heading' });//费用大类
-            var broad_heading_id = currentRecord.getValue({ fieldId: 'custitem_fee_broad_heading' });//费用大类id
+            var broad_heading = currentRecord.getText({ fieldId: 'custitem_scy_major_category' });//费用大类
+            var broad_heading_id = currentRecord.getValue({ fieldId: 'custitem_scy_major_category' });//费用大类id
 
-            var fee_detail = currentRecord.getText({ fieldId: 'custitem_fee_detail' });//费用明细
-            var fee_detail_id = currentRecord.getValue({ fieldId: 'custitem_fee_detail' });//费用明细
+            var subcategory = currentRecord.getText({ fieldId: 'custitem_scy_product_subcategory' });//费用小类
+            var subcategory_id = currentRecord.getValue({ fieldId: 'custitem_scy_product_subcategory' });//费用小类id
+
+            var fee_detail = currentRecord.getText({ fieldId: 'custitem_product_category' });//费用明细
+            var fee_detail_id = currentRecord.getValue({ fieldId: 'custitem_product_category' });//费用明细
 
             var box_type = currentRecord.getText({ fieldId: 'custitem_box_type' });//箱型
             var box_type_id = currentRecord.getValue({ fieldId: 'custitem_box_type' });//箱型id
@@ -218,7 +221,7 @@ define(['N/record', 'N/search', 'N/log', 'N/render', 'N/runtime', 'N/email', 'N/
             }
 
             var itemName = '其他费用';
-            var itemId;
+            var itemId = '';
             var fee_detail_code; //费用明细编码
 
             from_point_id = String(from_point_id).padStart(3, '0');
@@ -240,6 +243,11 @@ define(['N/record', 'N/search', 'N/log', 'N/render', 'N/runtime', 'N/email', 'N/
                 itemId = broad_heading_id;
                 broad_heading = broad_heading.split(' ')[1];
                 itemName = broad_heading;
+            }
+            if (subcategory) {
+                itemId += subcategory_id;
+                subcategory = subcategory.split(' ')[1];
+                itemName += '-' + subcategory;
             }
             if (fee_detail) {
                 itemId = itemId + fee_detail_code;
