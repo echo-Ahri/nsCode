@@ -14,6 +14,7 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'
             fieldChanged: fieldChanged,
             createXjd: createXjd, //生成询价单
             updatePrice: updatePrice, //更新价格
+            saveRecord: saveRecord, //更新价格
         };
 
         var thisData = {}; //存储当前对象记录的数据
@@ -96,7 +97,34 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'
 
         // 保存记录时的验证逻辑
         function saveRecord(context) {
+            var kh_id = thisData.getValue({ fieldId: 'entity' });
+            var filters = [
+                ['isinactive', 'IS', 'F']
+                , 'AND', ['internalid', 'ANYOF', kh_id]
+                , 'AND', ['stage', 'ANYOF', ['PROSPECT', 'CUSTOMER']]
+            ];
 
+            var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'custentity33', 'stage'] });
+            var is_save = false;
+            var stage_str = '客户';
+            search_data.run().each(function (res) {
+                var custentity33 = res.getValue('custentity33');
+                if (custentity33 == 7 || custentity33 == 10) {
+                    is_save = true;
+                } else {
+                    var stage = res.getValue('stage');
+                    console.log('stage', stage);
+                    if (stage == 'PROSPECT') {
+                        stage_str = '潜在客户';
+                    }
+                }
+            });
+            if (!is_save) {
+                dialog.alert({ title: '提示', message: '商机|估价单保存的客户的审批状态必须是审核通过的潜在客户和客户, 当前选择的客户阶段是[' + stage_str + '], 且审批未通过!' });
+                return false;
+            } else {
+                return true;
+            }
         }
 
         //生成询价单

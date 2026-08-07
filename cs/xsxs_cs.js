@@ -80,6 +80,7 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             var is_tj = true;
             var is_tj_str = '';
             var phone = thisData.getValue({ fieldId: 'phone' });
+            var email = thisData.getValue({ fieldId: 'email' });
             var isperson = thisData.getValue({ fieldId: 'isperson' });
             var companyname = thisData.getValue({ fieldId: 'companyname' });
 
@@ -132,13 +133,20 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
                 }
             }
 
+            var category = thisData.getValue({ fieldId: 'category' });
+            if (isEmpty(category)) {
+                is_tj = false;
+                is_tj_str += ' ' + '请选择类别';
+            } else if (category == 2 && isEmpty(email)){ //外贸
+                is_tj = false;
+                is_tj_str += ' ' + '是外贸类别, 请设置电子邮件';
+            }
+
             if (!is_tj) {
                 dialog.alert({ title: '提示', message: is_tj_str });
                 return false;
             }
-
-            var email = thisData.getValue({ fieldId: 'email' });
-            var phone = thisData.getValue({ fieldId: 'phone' });
+  
             var is_repeat = false; //默认不重复
             var custentity_is_repeat = 1; //1不重复 2已重复
 
@@ -217,7 +225,7 @@ define(['N/runtime', 'N/search', 'N/record', 'N/log', 'N/ui/dialog', 'N/url'],
             var custentity_is_repeat = this_record.getValue({ fieldId: 'custentity_is_repeat' });
             var approveStatus = this_record.getValue({ fieldId: 'approveStatus' });
             if (!isEmpty(email) && !isEmpty(phone)) { //有填写邮件需要检验 先取@后域名 不是类似qq的域名(排除的域DUPE_EXCLUDED_DOMAINS) 直接根据后缀去查 否则查所有
-                
+
                 var isperson = this_record.getValue({ fieldId: 'isperson' });
                 var custentity_lxr_dz_empty = true;
                 if (isperson == 'F') { //是公司类型 需要校验地址

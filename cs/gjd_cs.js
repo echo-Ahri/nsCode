@@ -140,6 +140,33 @@ define(['N/runtime', 'N/ui/message', 'N/record', 'N/log', 'N/ui/dialog', 'N/sear
                 var gjd_id = thisData.getValue({ fieldId: 'id' }); //估价单的 自增长 字段 
                 var sj_id = thisData.getValue({ fieldId: 'opportunity' }); //估价单记录的 商机字段 
 
+                var kh_id = thisData.getValue({ fieldId: 'entity' });
+                var filters = [
+                    ['isinactive', 'IS', 'F']
+                    , 'AND', ['internalid', 'ANYOF', kh_id]
+                    , 'AND', ['stage', 'ANYOF', ['PROSPECT', 'CUSTOMER']]
+                ];
+
+                var search_data = search.create({ type: 'customer', filters: filters, columns: ['internalid', 'custentity33', 'stage'] });
+                var is_save = false;
+                var stage_str = '客户';
+                search_data.run().each(function (res) {
+                    var custentity33 = res.getValue('custentity33');
+                    if (custentity33 == 7 || custentity33 == 10) {
+                        is_save = true;
+                    } else {
+                        var stage = res.getValue('stage');
+                        console.log('stage', stage);
+                        if (stage == 'PROSPECT') {
+                            stage_str = '潜在客户';
+                        }
+                    }
+                });
+                if (!is_save) {
+                    dialog.alert({ title: '提示', message: '商机|估价单保存的客户的审批状态必须是审核通过的潜在客户和客户, 当前选择的客户阶段是[' + stage_str + '], 且审批未通过!' });
+                    return false;
+                }
+
                 if (is_sj_create) {
                     //先判断每行数量不能超过当前加载的数量
                     var item_count = thisData.getLineCount({ sublistId: item_type });
